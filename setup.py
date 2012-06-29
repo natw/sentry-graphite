@@ -23,7 +23,7 @@ install_requires = [
 
 setup(
     name='sentry-graphite',
-    version='0.1.0',
+    version='0.1.1',
     author='DISQUS',
     author_email='opensource@disqus.com',
     url='http://github.com/disqus/sentry-graphite',

@@ -5,6 +5,7 @@ sentry_graphite
 :copyright: (c) 2012 DISQUS.
 :license: Apache License 2.0, see LICENSE for more details.
 """
+import logging
 
 from django import forms
 from sentry.conf import settings
@@ -12,18 +13,23 @@ from sentry.plugins import Plugin, register
 
 from pystatsd import Client
 
+
 NOTSET = object()
+
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = '8125'
+DEFAULT_PREFIX = 'sentry'
 
 
 class GraphiteConfigurationForm(forms.Form):
     host = forms.CharField(max_length=64, widget=forms.TextInput(attrs={
-        'placeholder': 'graphite.local',
+        'placeholder': DEFAULT_HOST,
     }))
     port = forms.IntegerField(max_value=65535, widget=forms.TextInput(attrs={
-        'placeholder': '8125',
+        'placeholder': DEFAULT_PORT,
     }))
     prefix = forms.CharField(max_length=64, widget=forms.TextInput(attrs={
-        'placeholder': 'sentry',
+        'placeholder': DEFAULT_PREFIX,
     }))
 
 
@@ -38,17 +44,19 @@ class GraphiteProcessor(Plugin):
         super(GraphiteProcessor, self).__init__(*args, **kwargs)
 
         if min_level is NOTSET:
-            min_level = settings.GRAPIHTE_LEVEL
+            min_level = getattr(settings, 'GRAPIHTE_LEVEL', logging.DEBUG)
         if include_loggers is NOTSET:
-            include_loggers = settings.GRAPHITE_INCLUDE_LOGGERS
+            include_loggers = getattr(settings, 'GRAPHITE_INCLUDE_LOGGERS',
+                                      None)
         if exclude_loggers is NOTSET:
-            exclude_loggers = settings.GRAPHITE_EXCLUDE_LOGGERS
+            exclude_loggers = getattr(settings, 'GRAPHITE_EXCLUDE_LOGGERS',
+                                      None)
         if host is NOTSET:
-            host = settings.GRAPHITE_HOST
+            host = getattr(settings, 'GRAPHITE_HOST', DEFAULT_HOST)
         if port is NOTSET:
-            port = settings.GRAPHITE_PORT
+            port = getattr(settings, 'GRAPHITE_PORT', DEFAULT_PORT)
         if prefix is NOTSET:
-            prefix = settings.GRAPHITE_PREFIX
+            prefix = getattr(settings, 'GRAPHITE_PREFIX', DEFAULT_PREFIX)
 
         self.min_level = min_level
         self.include_loggers = include_loggers
@@ -66,7 +74,10 @@ class GraphiteProcessor(Plugin):
         port = self.get_option('port', project) or self.port
         prefix = self.get_option('prefix', project) or self.prefix
 
-        key = '.'.join([prefix, event.message_top])
+        self.client.host = host
+        self.client.port = port
+
+        key = '.'.join([prefix, event.message_top()])
 
         self.client.increment(key)
 
