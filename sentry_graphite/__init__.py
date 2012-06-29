@@ -98,5 +98,5 @@ class GraphiteProcessor(Plugin):
             return
 
         self.record_event(group, event)
- 
- register(GraphiteProcessor)
+
+register(GraphiteProcessor)
